@@ -12,10 +12,12 @@ export default class Route {
 
     public routeValues: Array<string>;
     public query: Record<string, string>;
-
+    public data: Record<string,string>;
+    
     constructor(public url: string, public path: string | null, public handler?: handlerType) {
         this.routeValues = new Array<string>();
         this.query = {};
+        this.data = {};
 
         const parts = url.split(":/");
         if (parts.length >= 1) {

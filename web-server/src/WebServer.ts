@@ -1,7 +1,7 @@
 import { serve, ServerRequest } from "https://deno.land/std/http/server.ts";
 import { serveFile } from "https://deno.land/std@0.66.0/http/file_server.ts";
-import * as path from "https://deno.land/std/path/mod.ts";
-import * as fs from "https://deno.land/std/fs/mod.ts";
+// import * as path from "https://deno.land/std/path/mod.ts";
+// import * as fs from "https://deno.land/std/fs/mod.ts";
 
 
 import Route from './Route.ts';
@@ -9,12 +9,14 @@ import Route from './Route.ts';
 export default class WebServer {
 
     private staticFolder: string;
-    private routes: Array<Route>;
+    private getRoutes: Array<Route>;
+    private postRoutes: Array<Route>;
 
 
     constructor() {
         this.staticFolder = "public";
-        this.routes = new Array<Route>();
+        this.getRoutes = new Array<Route>();
+        this.postRoutes = new Array<Route>();
     }
 
     setStaticFolder(path: string): WebServer {
@@ -22,8 +24,13 @@ export default class WebServer {
         return this;
     }
 
-    addRoute(route: Route): WebServer {
-        this.routes.push(route);
+    addGetRoute(route: Route): WebServer {
+        this.getRoutes.push(route);
+        return this;
+    }
+
+    addPostRoutes(route: Route): WebServer {
+        this.postRoutes.push(route);
         return this;
     }
 
@@ -36,27 +43,40 @@ export default class WebServer {
     }
 
     public async send(req: ServerRequest, path: string) {
-        const fullPath = `${Deno.cwd()}/${this.staticFolder}/${path}`;
-        const present = await fs.exists(fullPath);
+        // const fullPath = `${Deno.cwd()}/${this.staticFolder}/${path}`;
+        // const present = await fs.exists(fullPath);
 
-        if (!present) {
-            req.respond({ status: 400 });
-            return;
-        }
+        // if (!present) {
+        //     req.respond({ status: 400 });
+        //     return;
+        // }
 
-        const content = await Deno.readFile(fullPath);
-        req.respond({ body: content });
+        // const content = await Deno.readFile(fullPath);
+        // req.respond({ body: content });
     }
 
     private async handleRoute(req: ServerRequest): Promise<void> {
-        const routeIndex = Route.findRouteIndex(this.routes, req.url);
+        let lookupRoutes = new Array<Route>();
+        if (req.method === "GET") lookupRoutes = this.getRoutes;
+        else if (req.method === "POST") lookupRoutes = this.postRoutes;
+
+        const routeIndex = Route.findRouteIndex(lookupRoutes, req.url);
+
         if (routeIndex === -1) {
             req.respond({ status: 400 });
             return;
         }
-        const selectedRoute = this.routes[routeIndex];
+
+        const selectedRoute = lookupRoutes[routeIndex];
+        if (req.method === "POST") {
+            const data = await Deno.readAll(req.body);
+            const dataEncoder = new TextDecoder();
+            selectedRoute.data = JSON.parse(dataEncoder.decode(data));
+        }
+       
         if (selectedRoute.handler) {
             const response = await selectedRoute.handler(selectedRoute);
+            console.log(response)
             const encoder = new TextEncoder();
             if (typeof response === 'object') {
                 const result = encoder.encode(JSON.stringify(response));

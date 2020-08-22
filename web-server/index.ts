@@ -2,13 +2,17 @@ import WebServer from './src/WebServer.ts';
 import Route from './src/Route.ts';
 
 await new WebServer()
-    .addRoute(new Route("/", "/index.html"))
-    .addRoute(new Route("/Products", "/Products/index.html"))
-    .addRoute(new Route("/Products/json", "/Products/mock/list.json"))
-    .addRoute(new Route("/Products/:id", null, (route) => {
+    .addGetRoute(new Route("/", "/index.html"))
+    .addGetRoute(new Route("/Products", "/Products/index.html"))
+    .addGetRoute(new Route("/Products/json", "/Products/mock/list.json"))
+    .addGetRoute(new Route("/Products/:id", null, (route) => {
         return [{ name: "khurram", address: "home" }]
     }))
-    .addRoute(new Route("/Products/:name", null, (route) => {
+    .addGetRoute(new Route("/Products/:name", null, (route) => {
         return `Echoing back ${route.query.name}`
+    }))
+    .addPostRoutes(new Route("/Products/newProduct", null, (route) => {
+        const str = JSON.stringify(route.data);
+        return "New Product created :" + str;
     }))
     .start(8000);

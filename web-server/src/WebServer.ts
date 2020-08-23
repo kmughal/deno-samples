@@ -66,8 +66,6 @@ export default class WebServer {
 
         const selectedRoute = lookupRoutes[routeIndex];
         if (req.method === "POST") {
-
-
             const boundaryRegex = /^multipart\/form-data;\sboundary=(?<boundary>.*)$/;
             const match = req.headers.get("content-type")!.match(boundaryRegex);
             if (match) {
@@ -93,43 +91,6 @@ export default class WebServer {
                 const dataEncoder = new TextDecoder();
                 selectedRoute.data = JSON.parse(dataEncoder.decode(data));
             }
-
-
-
-
-
-
-
-            //     const decoder = new TextDecoder();
-            //     let reqBody = decoder.decode(await Deno.readAll(req.body));
-
-            //     console.log(reqBody, " :reqbody");
-            //     let boundary =reqBody.split("\r\n").shift();
-            //     const e = new TextEncoder();
-            //    boundary = boundary;
-            //     console.log("boundary :" , boundary);
-            //     try {
-            //         const mr = new MultipartReader(
-            //             req.body ,
-            //             boundary ?? ""
-            //         );
-            //         const form = await mr.readForm(20);
-            //         console.log(form);
-
-            //     } catch(e) {
-            //         console.log(e)
-            //     }
-            //  const decoder = new TextDecoder();
-            // const reqBody = decoder.decode(await Deno.readAll(req.body));
-
-            // var match = reqBody.match(/boundary=([^\s]+)/);
-            // console.log({ match, reqBody })
-            // if (match) {
-            //     const boundary = match[1];
-            //     const reader = new MultipartReader(req.body, "");
-            //     const form = await reader.readForm(1024 * 1024); // 1MB
-            //     console.log(form);
-            // }
         }
 
         if (selectedRoute.handler) {

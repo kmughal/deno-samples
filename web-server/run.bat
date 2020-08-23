@@ -1,1 +1,1 @@
-deno run --allow-net  --allow-read --inspect-brk  index.ts
+deno run --allow-net  --allow-read  index.ts

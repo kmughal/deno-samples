@@ -1,7 +1,7 @@
 import WebServer from './src/WebServer.ts';
 import Route from './src/Route.ts';
 
-await new WebServer()
+await WebServer.Instance
     .addGetRoute(new Route("/", "/index.html"))
     .addGetRoute(new Route("/Products", "/Products/index.html"))
     .addGetRoute(new Route("/Products/json", "/Products/mock/list.json"))

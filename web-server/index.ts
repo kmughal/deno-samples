@@ -15,4 +15,5 @@ await WebServer.Instance
         const str = JSON.stringify(route.data);
         return "New Product created :" + str;
     }))
+    .send("/Products/json", "/Products/mock/list.json")
     .start(8000);

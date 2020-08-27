@@ -1,6 +1,6 @@
 import { serve, ServerRequest } from "https://deno.land/std/http/server.ts";
 import { serveFile } from "https://deno.land/std@0.66.0/http/file_server.ts";
-import { MultipartReader } from "https://deno.land/std@0.66.0/mime/multipart.ts";
+import { MultipartReader, FormFile } from "https://deno.land/std@0.66.0/mime/multipart.ts";
 import Route from './Route.ts';
 
 export default class WebServer {
@@ -39,17 +39,41 @@ export default class WebServer {
         }
     }
 
-    public async send(req: ServerRequest, path: string) {
-        // const fullPath = `${Deno.cwd()}/${this.staticFolder}/${path}`;
-        // const present = await fs.exists(fullPath);
+    public send(url: string, path: string): WebServer {
+        const route = new Route(url, path, undefined);
+        this.addGetRoute(route);
+        return this;
+    }
 
-        // if (!present) {
-        //     req.respond({ status: 400 });
-        //     return;
-        // }
+    private async setRouteValuesIfMultiPart(boundary: string, req: ServerRequest, selectedRoute: Route) {
 
-        // const content = await Deno.readFile(fullPath);
-        // req.respond({ body: content });
+        const mr = new MultipartReader(req.body, boundary);
+
+        try {
+            const form = await mr.readForm(20);
+            const data: Record<string, string> = {};
+            let formFiles = new Array<FormFile>();
+            for (let [key, value] of form.entries()) {
+                if (typeof value === "string") {
+                    data[key] = value;
+                } else {
+                    if (value !== undefined) {
+                        if (value as FormFile[]) {
+                            const fileList = value as FormFile[];
+                            formFiles = formFiles.concat(fileList);
+                        } else {
+                            const singleFile = value as FormFile;
+                            formFiles.push(singleFile);
+                        }
+                    }
+
+                }
+            }
+            selectedRoute.files = formFiles;
+            selectedRoute.data = data;
+        } catch (error) {
+            console.log(error.stack);
+        }
     }
 
     private async handleRoute(req: ServerRequest): Promise<void> {
@@ -69,23 +93,7 @@ export default class WebServer {
             const boundaryRegex = /^multipart\/form-data;\sboundary=(?<boundary>.*)$/;
             const match = req.headers.get("content-type")!.match(boundaryRegex);
             if (match) {
-                const boundary = match[1];
-                const mr = new MultipartReader(req.body, boundary);
-
-                try {
-                    const form = await mr.readForm(20);
-                    const data: Record<string, string> = {};
-
-                    for (let [key, value] of form.entries()) {
-                        console.log({ key, value })
-                        if (typeof value === "string") {
-                            data[key] = value;
-                        }
-                    }
-                    selectedRoute.data = data;
-                } catch (error) {
-                    console.log(error.stack);
-                }
+                await this.setRouteValuesIfMultiPart(match[1], req, selectedRoute);
             } else {
                 const data = await Deno.readAll(req.body);
                 const dataEncoder = new TextDecoder();
@@ -94,21 +102,33 @@ export default class WebServer {
         }
 
         if (selectedRoute.handler) {
-            const response = await selectedRoute.handler(selectedRoute);
-            console.log(response)
-            const encoder = new TextEncoder();
-            if (typeof response === 'object') {
-                const result = encoder.encode(JSON.stringify(response));
-                req.respond({ body: result, headers: new Headers({ 'Content-Type': 'application/json' }) });
-            } else if (typeof response === 'string') {
-                const result = encoder.encode(String(response));
-                req.respond({ body: result, headers: new Headers({ 'Content-Type': 'text/plain' }) });
-            }
-
-            return;
+            const response = await this.createResponse(req, selectedRoute);
+            return response;
         }
+
+
         const filePath = `${Deno.cwd()}/${this.staticFolder}/${selectedRoute.path}`;
         const content = await serveFile(req, filePath);
         req.respond(content);
+    }
+
+    private async createResponse(req: ServerRequest, selectedRoute: Route) {
+        if (!selectedRoute.handler) return;
+
+        const response = await selectedRoute.handler(selectedRoute);
+        const encoder = new TextEncoder();
+
+        let body: string | Uint8Array | Deno.Reader | undefined = undefined;
+        let headers: Headers = new Headers();
+
+        if (typeof response === 'object') {
+            body = encoder.encode(JSON.stringify(response));
+            headers = new Headers({ 'Content-Type': 'application/json' });
+        } else if (typeof response === 'string') {
+            body = encoder.encode(String(response));
+            headers = new Headers({ 'Content-Type': 'text/plain' });
+        }
+
+        req.respond({ body, headers });
     }
 }

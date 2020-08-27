@@ -1,5 +1,4 @@
-import { ServerRequest } from "https://deno.land/std/http/server.ts";
-
+import { FormFile } from "https://deno.land/std@0.66.0/mime/mod.ts";
 
 export type handlerType = (route: Route) => string | object;
 
@@ -12,8 +11,9 @@ export default class Route {
 
     public routeValues: Array<string>;
     public query: Record<string, string>;
-    public data: Record<string,string>;
-    
+    public data: Record<string, string>;
+    public files: FormFile[] | FormFile | undefined;
+
     constructor(public url: string, public path: string | null, public handler?: handlerType) {
         this.routeValues = new Array<string>();
         this.query = {};
